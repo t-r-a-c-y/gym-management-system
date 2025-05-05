@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gym Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.22.9/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios@1.4.0/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-router-dom@6.14.2/dist/umd/react-router-dom.min.js"></script>
+<script type="text/babel">
+    const { BrowserRouter, Routes, Route, useNavigate } = ReactRouterDOM;
+
+    axios.defaults.baseURL = 'http://localhost:8080/api';
+    axios.interceptors.request.use(config => {
+        const token = localStorage.getItem('token');
+        if (token) config.headers.Authorization = `Bearer ${token}`;
+        return config;
+    });
+
+    const App = () => {
+        return (
+            <BrowserRouter>
+                <Routes>
+                    <Route path="/" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                </Routes>
+            </BrowserRouter>
+        );
+    };
+
+    const Login = () => {
+        const navigate = useNavigate();
+        const [email, setEmail] = React.useState('');
+        const [password, setPassword] = React.useState('');
+
+        const handleLogin = async () => {
+            try {
+                const response = await axios.post('/auth/login', { email, password });
+                localStorage.setItem('token', response.data);
+                navigate('/dashboard');
+            } catch (error) {
+                alert('Login failed');
+            }
+        };
+
+        return (
+            <div className="flex items-center justify-center h-screen bg-gray-100">
+                <div className="p-6 bg-white rounded shadow-md">
+                    <h2 className="text-2xl mb-4">Login</h2>
+                    <input
+                        type="email"
+                        placeholder="Email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="mb-4 p-2 border rounded w-full"
+                    />
+                    <input
+                        type="password"
+                        placeholder="Password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="mb-4 p-2 border rounded w-full"
+                    />
+                    <button
+                        onClick={handleLogin}
+                        className="bg-blue-500 text-white p-2 rounded w-full"
+                    >
+                        Login
+                    </button>
+                    <button
+                        onClick={() => navigate('/register')}
+                        className="mt-2 text-blue-500"
+                    >
+                        Register
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
+    const Register = () => {
+        const navigate = useNavigate();
+        const [branch, setBranch] = React.useState({ name: '', email: '', location: '' });
+        const [user, setUser] = React.useState({ email: '', password: '', role: 'ADMIN' });
+
+        const handleRegister = async () => {
+            try {
+                const branchResponse = await axios.post('/admin/branch', branch);
+                await axios.post('/auth/register', {
+                    ...user,
+                    branchId: branchResponse.data.id
+                });
+                navigate('/');
+            } catch (error) {
+                alert('Registration failed');
+            }
+        };
+
+        return (
+            <div className="flex items-center justify-center h-screen bg-gray-100">
+                <div className="p-6 bg-white rounded shadow-md">
+                    <h2 className="text-2xl mb-4">Register Branch</h2>
+                    <input
+                        type="text"
+                        placeholder="Branch Name"
+                        value={branch.name}
+                        onChange={(e) => setBranch({ ...branch, name: e.target.value })}
+                        className="mb-4 p-2 border rounded w-full"
+                    />
+                    <input
+                        type="email"
+                        placeholder="Branch Email"
+                        value={branch.email}
+                        onChange={(e) => setBranch({ ...branch, email: e.target.value })}
+                        className="mb-4 p-2 border rounded w-full"
+                    />
+                    <input
+                        type="text"
+                        placeholder="Location"
+                        value={branch.location}
+                        onChange={(e) => setBranch({ ...branch, location: e.target.value })}
+                        className="mb-4 p-2 border rounded w-full"
+                    />
+                    <h2 className="text-2xl mb-4">Register Admin</h2>
+                    <input
+                        type="email"
+                        placeholder="Admin Email"
+                        value={user.email}
+                        onChange={(e) => setUser({ ...user, email: e.target.value })}
+                        className="mb-4 p-2 border rounded w-full"
+                    />
+                    <input
+                        type="password"
+                        placeholder="Admin Password"
+                        value={user.password}
+                        onChange={(e) => setUser({ ...user, password: e.target.value })}
+                        className="mb-4 p-2 border rounded w-full"
+                    />
+                    <button
+                        onClick={handleRegister}
+                        className="bg-blue-500 text-white p-2 rounded w-full"
+                    >
+                        Register
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
+    const Dashboard = () => {
+        const [role, setRole] = React.useState('');
+        const [branchId, setBranchId] = React.useState(null);
+
+        React.useEffect(() => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                setRole(payload.role);
+                setBranchId(payload.branchId);
+            }
+        }, []);
+
+        return (
+            <div className="p-6">
+                <h1 className="text-3xl mb-4">Gym Management Dashboard</h1>
+                {role === 'ADMIN' && <AdminDashboard branchId={branchId} />}
+                {role === 'TRAINER' && <TrainerDashboard branchId={branchId} />}
+                {role === 'MEMBER' && <MemberDashboard />}
+            </div>
+        );
+    };
+
+    const AdminDashboard = ({ branchId }) => {
+        const [user, setUser] = React.useState({ email: '', password: '', role: 'TRAINER', branchId });
+        const [analytics, setAnalytics] = React.useState('');
+
+        const handleAddUser = async () => {
+            try {
+                await axios.post('/auth/register', user);
+                alert('User added');
+            } catch (error) {
+                alert('Failed to add user');
+            }
+        };
+
+        const handleGetAnalytics = async () => {
+            try {
+                const response = await axios.get(`/admin/analytics/${branchId}`);
+                setAnalytics(response.data);
+            } catch (error) {
+                alert('Failed to fetch analytics');
+            }
+        };
+
+        return (
+            <div>
+                <h2 className="text-2xl mb-4">Admin Dashboard</h2>
+                <div className="mb-4">
+                    <h3 className="text-xl">Add User</h3>
+                    <input
+                        type="email"
+                        placeholder="User Email"
+                        value={user.email}
+                        onChange={(e) => setUser({ ...user, email: e.target.value })}
+                        className="mb-2 p-2 border rounded w-full"
+                    />
+                    <input
+                        type="password"
+                        placeholder="User Password"
+                        value={user.password}
+                        onChange={(e) => setUser({ ...user, password: e.target.value })}
+                        className="mb-2 p-2 border rounded w-full"
+                    />
+                    <select
+                        value={user.role}
+                        onChange={(e) => setUser({ ...user, role: e.target.value })}
+                        className="mb-2 p-2 border rounded w-full"
+                    >
+                        <option value="TRAINER">Trainer</option>
+                        <option value="MEMBER">Member</option>
+                    </select>
+                    <button
+                        onClick={handleAddUser}
+                        className="bg-blue-500 text-white p-2 rounded"
+                    >
+                        Add User
+                    </button>
+                </div>
+                <div>
+                    <h3 className="text-xl">Branch Analytics</h3>
+                    <button
+                        onClick={handleGetAnalytics}
+                        className="bg-blue-500 text-white p-2 rounded mb-2"
+                    >
+                        Get Analytics
+                    </button>
+                    <p>{analytics}</p>
+                </div>
+            </div>
+        );
+    };
+
+    const TrainerDashboard = ({ branchId }) => {
+        const [schedule, setSchedule] = React.useState({
+            trainerId: '1',
+            className: '',
+            startTime: '',
+            endTime: '',
+            capacity: '',
+            branchId
+        });
+        const [attendance, setAttendance] = React.useState({ memberId: '', scheduleId: '', status: 'PRESENT' });
+
+        const handleCreateSchedule = async () => {
+            try {
+                await axios.post('/trainer/schedule', schedule);
+                alert('Schedule created');
+            } catch (error) {
+                alert('Failed to create schedule');
+            }
+        };
+
+        const handleMarkAttendance = async () => {
+            try {
+                await axios.post('/trainer/attendance', attendance);
+                alert('Attendance marked');
+            } catch (error) {
+                alert('Failed to mark attendance');
+            }
+        };
+
+        return (
+            <div>
+                <h2 className="text-2xl mb-4">Trainer Dashboard</h2>
+                <div className="mb-4">
+                    <h3 className="text-xl">Create Class Schedule</h3>
+                    <input
+                        type="text"
+                        placeholder="Class Name"
+                        value={schedule.className}
+                        onChange={(e) => setSchedule({ ...schedule, className: e.target.value })}
+                        className="mb-2 p-2 border rounded w-full"
+                    />
+                    <input
+                        type="datetime-local"
+                        placeholder="Start Time"
+                        value={schedule.startTime}
+                        onChange={(e) => setSchedule({ ...schedule, startTime: e.target.value })}
+                        className="mb-2 p-2 border rounded w-full"
+                    />
+                    <input
+                        type="datetime-local"
+                        placeholder="End Time"
+                        value={schedule.endTime}
+                        onChange={(e) => setSchedule({ ...schedule, endTime: e.target.value })}
+                        className="mb-2 p-2 border rounded w-full"
+                    />
+                    <input
+                        type="number"
+                        placeholder="Capacity"
+                        value={schedule.capacity}
+                        onChange={(e) => setSchedule({ ...schedule, capacity: e.target.value })}
+                        className="mb-2 p-2 border rounded w-full"
+                    />
+                    <button
+                        onClick={handleCreateSchedule}
+                        className="bg-blue-500 text-white p-2 rounded"
+                    >
+                        Create Schedule
+                    </button>
+                </div>
+                <div>
+                    <h3 className="text-xl">Mark Attendance</h3>
+                    <input
+                        type="number"
+                        placeholder="Member ID"
+                        value={attendance.memberId}
+                        onChange={(e) => setAttendance({ ...attendance, memberId: e.target.value })}
+                        className="mb-2 p-2 border rounded w-full"
+                    />
+                    <input
+                        type="number"
+                        placeholder="Schedule ID"
+                        value={attendance.scheduleId}
+                        onChange={(e) => setAttendance({ ...attendance, scheduleId: e.target.value })}
+                        className="mb-2 p-2 border rounded w-full"
+                    />
+                    <select
+                        value={attendance.status}
+                        onChange={(e) => setAttendance({ ...attendance, status: e.target.value })}
+                        className="mb-2 p-2 border rounded w-full"
+                    >
+                        <option value="PRESENT">Present</option>
+                        <option value="ABSENT">Absent</option>
+                    </select>
+                    <button
+                        onClick={handleMarkAttendance}
+                        className="bg-blue-500 text-white p-2 rounded"
+                    >
+                        Mark Attendance
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
+    const MemberDashboard = () => {
+        const [booking, setBooking] = React.useState({ memberId: '1', scheduleId: '', status: 'PENDING' });
+        const [payment, setPayment] = React.useState({ memberId: '1', amount: '', paymentDate: '', status: 'PENDING' });
+
+        const handleBookClass = async () => {
+            try {
+                await axios.post('/member/booking', booking);
+                alert('Class booked');
+            } catch (error) {
+                alert('Failed to book class');
+            }
+        };
+
+        const handleProcessPayment = async () => {
+            try {
+                await axios.post('/member/payment', payment);
+                alert('Payment processed');
+            } catch (error) {
+                alert('Failed to process payment');
+            }
+        };
+
+        return (
+            <div>
+                <h2 className="text-2xl mb-4">Member Dashboard</h2>
+                <div className="mb-4">
+                    <h3 className="text-xl">Book Class</h3>
+                    <input
+                        type="number"
+                        placeholder="Schedule ID"
+                        value={booking.scheduleId}
+                        onChange={(e) => setBooking({ ...booking, scheduleId: e.target.value })}
+                        className="mb-2 p-2 border rounded w-full"
+                    />
+                    <select
+                        value={booking.status}
+                        onChange={(e) => setBooking({ ...booking, status: e.target.value })}
+                        className="mb-2 p-2 border rounded w-full"
+                    >
+                        <option value="PENDING">Pending</option>
+                        <option value="CONFIRMED">Confirmed</option>
+                        <option value="CANCELLED">Cancelled</option>
+                    </select>
+                    <button
+                        onClick={handleBookClass}
+                        className="bg-blue-500 text-white p-2 rounded"
+                    >
+                        Book Class
+                    </button>
+                </div>
+                <div>
+                    <h3 className="text-xl">Process Payment</h3>
+                    <input
+                        type="number"
+                        placeholder="Amount"
+                        value={payment.amount}
+                        onChange={(e) => setPayment({ ...payment, amount: e.target.value })}
+                        className="mb-2 p-2 border rounded w-full"
+                    />
+                    <input
+                        type="date"
+                        placeholder="Payment Date"
+                        value={payment.paymentDate}
+                        onChange={(e) => setPayment({ ...payment, paymentDate: e.target.value })}
+                        className="mb-2 p-2 border rounded w-full"
+                    />
+                    <select
+                        value={payment.status}
+                        onChange={(e) => setPayment({ ...payment, status: e.target.value })}
+                        className="mb-2 p-2 border rounded w-full"
+                    >
+                        <option value="PAID">Paid</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="FAILED">Failed</option>
+                    </select>
+                    <button
+                        onClick={handleProcessPayment}
+                        className="bg-blue-500 text-white p-2 rounded"
+                    >
+                        Process Payment
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+</script>
+</body>
+</html>
