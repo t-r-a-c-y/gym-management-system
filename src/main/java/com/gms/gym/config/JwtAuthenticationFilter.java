@@ -25,7 +25,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         System.out.println("JwtFilter: Processing path: " + path);
 
         // Skip JWT validation for auth, Swagger, and OPTIONS requests
-        if (path.startsWith("/api/auth/") ||
+        if (path.startsWith("/a/api/auth/") ||
                 "OPTIONS".equals(request.getMethod())) {
             System.out.println("JwtFilter: Skipping JWT validation for: " + path);
             filterChain.doFilter(request, response);

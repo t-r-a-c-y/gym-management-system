@@ -9,6 +9,8 @@ import com.gms.gym.util.JwtUtil;
 import com.gms.gym.util.PasswordEncoderUtil;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class UserService {
 
@@ -52,5 +54,13 @@ public class UserService {
     public User findByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+    }
+
+    public int getUserCount() {
+        return (int) userRepository.count();
+    }
+
+    public List<User> findAll() {
+        return userRepository.findAll();
     }
 }
