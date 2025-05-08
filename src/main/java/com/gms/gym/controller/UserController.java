@@ -1,47 +1,58 @@
 package com.gms.gym.controller;
 
 import com.gms.gym.entity.User;
-import com.gms.gym.service.UserService;
-import jakarta.servlet.http.HttpServletRequest;
+import com.gms.gym.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/user")
+@RequestMapping("/api/users")
+@CrossOrigin(origins = "http://localhost:8080")
 public class UserController {
 
     @Autowired
-    private UserService userService;
+    private UserRepository userRepository;
 
-    public UserController() {
-        System.out.println("UserController initialized for /a/api/user");
-    }
-
-    @GetMapping("/profile")
-    public ResponseEntity<?> getProfile(HttpServletRequest request) {
-        System.out.println("UserController: Profile endpoint hit for path: /a/api/user/profile");
-        String email = (String) request.getAttribute("email");
-        String role = (String) request.getAttribute("role");
-        Object branchIdObj = request.getAttribute("branchId");
-        Long branchId = null;
-        if (branchIdObj instanceof Integer) {
-            branchId = ((Integer) branchIdObj).longValue();
-        } else if (branchIdObj instanceof Long) {
-            branchId = (Long) branchIdObj;
-        } else {
-            System.out.println("UserController: Invalid branchId type: " + branchIdObj);
-        }
-        System.out.println("UserController: Authenticated user - email: " + email + ", role: " + role + ", branchId: " + branchId);
-        return ResponseEntity.ok("Profile data for authenticated user");
-    }
-
-    @GetMapping("/all")
+    @GetMapping
     public List<User> getUsers() {
-        return userService.findAll(); // Assuming UserService returns a list
+        return userRepository.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<User> getUserById(@PathVariable Long id) {
+        Optional<User> user = userRepository.findById(id);
+        return user.map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PostMapping
+    public User addUser(@RequestBody User user) {
+        return userRepository.save(user);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User updatedUser) {
+        Optional<User> existingUser = userRepository.findById(id);
+        if (existingUser.isPresent()) {
+            User user = existingUser.get();
+            user.setEmail(updatedUser.getEmail());
+            user.setRole(updatedUser.getRole());
+            user.setBranch(updatedUser.getBranch());
+            return ResponseEntity.ok(userRepository.save(user));
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+        if (!userRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        userRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 }

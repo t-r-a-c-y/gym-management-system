@@ -1,6 +1,7 @@
 package com.gms.gym.controller;
 
 import com.gms.gym.repository.BranchRepository;
+import com.gms.gym.repository.WorkoutRepository;
 import com.gms.gym.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,13 +18,16 @@ public class DashboardController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private WorkoutRepository workoutRepository;
+
     @GetMapping
     public Object getDashboard() {
         System.out.println("DashboardController: Handling GET /a/api/dashboard");
         return new Object() {
-            public int branches = (int) branchRepository.count();
-            public int users = userService.getUserCount();
-            public int workouts = 0; // Replace with workout service if available
+            public long branches = branchRepository.count();
+            public long users = userService.getUserCount();
+            public long workouts = workoutRepository.count();
         };
     }
 }
